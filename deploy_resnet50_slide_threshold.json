@@ -1,5 +1,4 @@
 {
-    "best_threshold": 0.5,
-    "agg_method": "percentile",
-    "percentile": 90
+  "best_threshold": 0.3,
+  "agg_percentile": 90
 }
