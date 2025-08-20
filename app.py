@@ -30,7 +30,7 @@ def load_model_and_threshold(model_path, threshold_path):
 
     # Load tuned threshold
     with open(threshold_path, "r") as f:
-        threshold = json.load(f).get("best_threshold", 0.5)
+        threshold = json.load(f).get("best_threshold", 0.4)
 
     return model, threshold
 
