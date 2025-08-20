@@ -82,7 +82,7 @@ uploaded_file = st.file_uploader("Upload a histopathology image (PNG/JPG)", type
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="Uploaded Image", use_container_width=True)
 
     # Run prediction
     label, prob = predict_image(image)
