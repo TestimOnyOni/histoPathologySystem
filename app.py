@@ -1,84 +1,114 @@
 import streamlit as st
 import torch
 import torch.nn as nn
-import torchvision.models as models
 import torchvision.transforms as transforms
+import torchvision.models as models
 from PIL import Image
+import numpy as np
+import zipfile
+import os
+import tempfile
 import json
+
+# ================================
+# Page config
+# ================================
+st.set_page_config(page_title="BreakHis Slide Classifier", page_icon="🧬", layout="centered")
 
 # ================================
 # Settings
 # ================================
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL_PATH = "deploy_resnet50_slide.pth"
-THRESHOLD_PATH = "deploy_resnet50_slide_threshold.json"
+CONFIG_PATH = "deploy_resnet50_slide_threshold.json"
+
+# Load threshold config
+with open(CONFIG_PATH, "r") as f:
+    config = json.load(f)
+THRESHOLD = config.get("best_threshold", 0.39)
+PERCENTILE = config.get("percentile", 90)
 
 # ================================
 # Model Loader
 # ================================
 @st.cache_resource
-def load_model_and_threshold(model_path, threshold_path):
-    # Load model
+def load_model():
     model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
     in_features = model.fc.in_features
-    model.fc = nn.Linear(in_features, 2)  # 2 classes: benign, malignant
-
-    state_dict = torch.load(model_path, map_location=DEVICE)
-    model.load_state_dict(state_dict)
+    model.fc = nn.Linear(in_features, 2)
+    model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
     model = model.to(DEVICE)
     model.eval()
+    return model
 
-    # Load tuned threshold
-    with open(threshold_path, "r") as f:
-        threshold = json.load(f).get("best_threshold", 0.4)
-
-    return model, threshold
-
-model, best_threshold = load_model_and_threshold(MODEL_PATH, THRESHOLD_PATH)
+model = load_model()
+st.sidebar.success(f"Model ready ✅ | Percentile={PERCENTILE}, Threshold={THRESHOLD}")
 
 # ================================
-# Transform for Input Images
+# Preprocessing
 # ================================
 transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225]),
+                         std=[0.229, 0.224, 0.225])
 ])
 
-# ================================
-# Prediction Function
-# ================================
-def predict(image: Image.Image):
-    img_t = transform(image).unsqueeze(0).to(DEVICE)
+def predict_patch(img: Image.Image):
+    img = transform(img).unsqueeze(0).to(DEVICE)
     with torch.no_grad():
-        outputs = model(img_t)
-        probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
-    malignant_prob = probs[1]
-    pred_class = 1 if malignant_prob >= best_threshold else 0
-    return pred_class, malignant_prob
+        outputs = model(img)
+        probs = torch.softmax(outputs, dim=1)[:, 1].cpu().numpy()[0]
+    return probs
+
+# ================================
+# Slide-level Prediction
+# ================================
+def predict_slide_from_zip(zip_file):
+    probs = []
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        with zipfile.ZipFile(zip_file, "r") as zf:
+            zf.extractall(tmpdir)
+
+        # Loop over all extracted images
+        for root, _, files in os.walk(tmpdir):
+            for file in files:
+                if file.lower().endswith((".png", ".jpg", ".jpeg")):
+                    img_path = os.path.join(root, file)
+                    img = Image.open(img_path).convert("RGB")
+                    prob = predict_patch(img)
+                    probs.append(prob)
+
+    if len(probs) == 0:
+        return None, []
+
+    # Aggregate by percentile
+    agg_prob = np.percentile(probs, PERCENTILE)
+    return agg_prob, probs
 
 # ================================
 # Streamlit UI
 # ================================
-st.set_page_config(page_title="BreakHis Classifier", page_icon="🧬")
+st.title("🧬 BreakHis Slide-Level Classifier")
+st.write("Upload a **ZIP file** containing slide patches (e.g., extracted tissue images).")
 
-st.title("🧬 BreakHis Histopathology Classifier")
-st.write("Upload a histopathology patch image to classify as **Benign** or **Malignant**.")
+uploaded_file = st.file_uploader("Upload ZIP of patches", type=["zip"])
 
-# ✅ Status line to confirm tuned threshold
-st.info(f"🔧 Using tuned decision threshold = **{best_threshold:.2f}**")
+if uploaded_file:
+    st.info("Running inference on all patches... Please wait ⏳")
+    agg_prob, patch_probs = predict_slide_from_zip(uploaded_file)
 
-uploaded_file = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
-
-if uploaded_file is not None:
-    image = Image.open(uploaded_file).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_container_width=True)
-
-    pred_class, malignant_prob = predict(image)
-
-    st.subheader("Prediction")
-    if pred_class == 1:
-        st.error(f"🔴 Malignant (Probability = {malignant_prob:.2f}, Threshold = {best_threshold:.2f})")
+    if agg_prob is None:
+        st.error("❌ No valid image files found in the uploaded ZIP.")
     else:
-        st.success(f"🟢 Benign (Probability = {malignant_prob:.2f}, Threshold = {best_threshold:.2f})")
+        # Final slide-level decision
+        prediction = "🔴 Malignant" if agg_prob >= THRESHOLD else "🟢 Benign"
+        st.subheader("📊 Slide-level Result")
+        st.write(f"**{prediction}** (Aggregated Probability = {agg_prob:.2f}, Threshold = {THRESHOLD})")
+
+        # Patch statistics
+        st.subheader("📈 Patch-level Summary")
+        st.write(f"Number of patches processed: {len(patch_probs)}")
+        st.write(f"Patch probabilities → min: {np.min(patch_probs):.2f}, "
+                 f"mean: {np.mean(patch_probs):.2f}, max: {np.max(patch_probs):.2f}")
