@@ -12,7 +12,7 @@ import json
 # =====================
 # Load Model + Config
 # =====================
-MODEL_PATH = "deploy_resnet50_slide.pth"
+MODEL_PATH = "best_resnet50_balanced.pth"
 CONFIG_PATH = "deploy_resnet50_slide_threshold.json"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
