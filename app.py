@@ -20,7 +20,7 @@ st.set_page_config(page_title="BreakHis Slide Classifier", page_icon="🧬", lay
 # Settings
 # ================================
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = "deploy_resnet50_slide.pth"
+MODEL_PATH = "best_resnet50_balanced.pth"
 CONFIG_PATH = "deploy_resnet50_slide_threshold.json"
 
 # Load threshold config
