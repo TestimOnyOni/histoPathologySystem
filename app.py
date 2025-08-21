@@ -69,7 +69,8 @@ if uploaded_file is not None:
                 prob = torch.softmax(outputs, dim=1)[:, 1].item()
                 patch_probs.append(prob)
 
-        if patch_probs:
+        if len(patch_probs) >= 1:
+            # if patch_probs:
             agg_prob = np.mean(patch_probs)
             label = "Malignant" if agg_prob >= THRESHOLD else "Benign"
             emoji = "🔴" if label == "Malignant" else "🟢"
