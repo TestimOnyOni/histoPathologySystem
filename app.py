@@ -9,6 +9,7 @@ import zipfile
 import os
 import tempfile
 import json
+import matplotlib.pyplot as plt
 
 # ================================
 # Page config
@@ -112,3 +113,11 @@ if uploaded_file:
         st.write(f"Number of patches processed: {len(patch_probs)}")
         st.write(f"Patch probabilities → min: {np.min(patch_probs):.2f}, "
                  f"mean: {np.mean(patch_probs):.2f}, max: {np.max(patch_probs):.2f}")
+
+st.subheader("📊 Patch Probability Distribution")
+fig, ax = plt.subplots()
+ax.hist(patch_probs, bins=10, color="skyblue", edgecolor="black")
+ax.set_xlabel("Probability (Malignant)")
+ax.set_ylabel("Count")
+ax.set_title("Distribution of Patch Predictions")
+st.pyplot(fig)
