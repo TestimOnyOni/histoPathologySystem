@@ -111,6 +111,7 @@ if uploaded_file:
         # Final slide-level decision
         prediction = "🔴 Malignant" if agg_prob >= THRESHOLD else "🟢 Benign"
         st.subheader("📊 Slide-level Result")
+        st.write(f"{THRESHOLD} or more implies Malignant")
         st.write(f"**{prediction}** (Aggregated Probability = {agg_prob:.2f}, Threshold = {THRESHOLD})")
 
         # Patch statistics
