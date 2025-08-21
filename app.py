@@ -117,8 +117,8 @@ if uploaded_file:
         st.subheader("📈 Patch-level Summary")
         st.write(f"Number of patches processed: {len(patch_probs)}")
         st.write(f"Patch probabilities → min: {np.min(patch_probs):.2f}, "
-<<<<<<< HEAD
-                 f"mean: {np.mean(patch_probs):.2f}, max: {np.max(patch_probs):.2f}")
+
+#        f"mean: {np.mean(patch_probs):.2f}, max: {np.max(patch_probs):.2f}")
 
 st.subheader("📊 Patch Probability Distribution")
 fig, ax = plt.subplots()
@@ -127,6 +127,4 @@ ax.set_xlabel("Probability (Malignant)")
 ax.set_ylabel("Count")
 ax.set_title("Distribution of Patch Predictions")
 st.pyplot(fig)
-=======
-                 f"mean: {np.mean(patch_probs):.2f}, max: {np.max(patch_probs):.2f}")
->>>>>>> 1c1208a (I'm)
+# f"mean: {np.mean(patch_probs):.2f}, max: {np.max(patch_probs):.2f}")
