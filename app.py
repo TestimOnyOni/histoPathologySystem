@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 # Configurations
 # =====================
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = "deploy_resnet50_slide.pth"
+MODEL_PATH = "best_resnet50_balanced.pth"
 THRESHOLD = 0.39  # best threshold from eval
 
 # =====================
